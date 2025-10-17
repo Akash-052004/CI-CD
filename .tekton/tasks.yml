@@ -1,0 +1,37 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: cleanup-task
+spec:
+  params:
+    - name: NAMESPACE
+      type: string
+      description: Namespace to cleanup
+      default: "default"
+  steps:
+    - name: cleanup
+      image: bitnami/kubectl:1.26
+      script: |
+        #!/bin/sh
+        echo "Cleaning up resources in namespace $(params.NAMESPACE)"
+        kubectl delete pods --all -n $(params.NAMESPACE) || true
+        kubectl delete pvc --all -n $(params.NAMESPACE) || true
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: nose-test-task
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: run-nose
+      image: python:3.10
+      workingDir: /workspace/source
+      script: |
+        #!/bin/sh
+        set -e
+        pip install -r requirements.txt || true
+        pip install nose
+        echo "Running nose tests"
+        nosetests --verbosity=2
